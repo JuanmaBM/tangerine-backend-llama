@@ -1,6 +1,7 @@
 import json
 import logging
 import uuid
+from typing import Generator, Any
 
 from flask import Response, request, stream_with_context
 from flask_restful import Resource
@@ -13,8 +14,11 @@ from tangerine.embeddings import embed_query
 from tangerine.models.assistant import Assistant
 from tangerine.models.interactions import store_interaction
 from tangerine.search import search_engine
+from tangerine.llama import llama_client
 from tangerine.utils import File, add_filenames_to_assistant, embed_files, remove_files
 from tangerine.vector import vector_db
+
+from llama_stack_client import AgentEventLogger
 
 log = logging.getLogger("tangerine.resources")
 
@@ -110,6 +114,7 @@ class AssistantDocuments(Resource):
             for file in files:
                 yield json.dumps({"file": file.display_name, "step": "start"}) + "\n"
                 embed_files([file], assistant)
+                llama_client.insert_documents([file], assistant)
                 add_filenames_to_assistant([file], assistant)
                 yield json.dumps({"file": file.display_name, "step": "end"}) + "\n"
 
@@ -156,32 +161,49 @@ class AssistantChatApi(Resource):
         question, session_uuid, stream, previous_messages, interaction_id, client = (
             self._extract_request_data()
         )
-        embedding = self._embed_question(question)
-        search_results = self._get_search_results(assistant.id, question, embedding)
-        llm_response = self._call_llm(
-            assistant, previous_messages, question, search_results, stream, interaction_id
+        # embedding = self._embed_question(question)
+        # search_results = self._get_search_results(assistant.id, question, embedding)
+        # llm_response = self._call_llm(
+        #     assistant, previous_messages, question, search_results, stream, interaction_id
+        # )
+        response = llama_client.ask(
+            assistant, question, interaction_id
         )
 
-        if self._is_streaming_response(llm_response, stream):
-            return self._handle_streaming_response(
-                llm_response,
-                question,
-                embedding,
-                search_results,
-                session_uuid,
-                interaction_id,
-                client,
-            )
 
-        return self._handle_final_response(
-            llm_response,
-            question,
-            embedding,
-            search_results,
-            session_uuid,
-            interaction_id,
-            client,
-        )
+        # stream = AgentEventLogger.log(response)
+        def build_stream() -> Generator[Any, Any, None]:
+            accumulated_response = ""
+            for log in AgentEventLogger().log(response):
+                log.print()
+                content = log.content
+                message = {
+                    "text_content": str(content)
+                }
+                sse_line = f"data: {json.dumps(message)}\n\n"
+                accumulated_response += sse_line
+                yield accumulated_response
+        return Response(stream_with_context(build_stream()))
+        # if self._is_streaming_response(llm_response, stream):
+        #     return self._handle_streaming_response(
+        #         llm_response,
+        #         question,
+        #         embedding,
+        #         search_results,
+        #         session_uuid,
+        #         interaction_id,
+        #         client,
+        #     )
+
+        # return self._handle_final_response(
+        #     llm_response,
+        #     question,
+        #     embedding,
+        #     search_results,
+        #     session_uuid,
+        #     interaction_id,
+        #     client,
+        # )
 
     def _get_assistant(self, assistant_id):
         return Assistant.get(assistant_id)
