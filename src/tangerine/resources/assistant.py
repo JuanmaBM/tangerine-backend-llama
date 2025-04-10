@@ -157,53 +157,14 @@ class AssistantChatApi(Resource):
         if not assistant:
             return {"message": "assistant not found"}, 404
 
-        log.debug("querying vector DB")
         question, session_uuid, stream, previous_messages, interaction_id, client = (
             self._extract_request_data()
         )
-        # embedding = self._embed_question(question)
-        # search_results = self._get_search_results(assistant.id, question, embedding)
-        # llm_response = self._call_llm(
-        #     assistant, previous_messages, question, search_results, stream, interaction_id
-        # )
         response = llama_client.ask(
-            assistant, question, interaction_id
+            assistant, question, session_uuid
         )
 
-
-        # stream = AgentEventLogger.log(response)
-        def build_stream() -> Generator[Any, Any, None]:
-            accumulated_response = ""
-            for log in AgentEventLogger().log(response):
-                log.print()
-                content = log.content
-                message = {
-                    "text_content": str(content)
-                }
-                sse_line = f"data: {json.dumps(message)}\n\n"
-                accumulated_response += sse_line
-                yield accumulated_response
-        return Response(stream_with_context(build_stream()))
-        # if self._is_streaming_response(llm_response, stream):
-        #     return self._handle_streaming_response(
-        #         llm_response,
-        #         question,
-        #         embedding,
-        #         search_results,
-        #         session_uuid,
-        #         interaction_id,
-        #         client,
-        #     )
-
-        # return self._handle_final_response(
-        #     llm_response,
-        #     question,
-        #     embedding,
-        #     search_results,
-        #     session_uuid,
-        #     interaction_id,
-        #     client,
-        # )
+        return llama_client.generate_response(response)
 
     def _get_assistant(self, assistant_id):
         return Assistant.get(assistant_id)
@@ -216,124 +177,3 @@ class AssistantChatApi(Resource):
         interaction_id = request.json.get("interactionId", None)
         client = request.json.get("client", "unknown")
         return question, session_uuid, stream, previous_messages, interaction_id, client
-
-    def _embed_question(self, question):
-        return embed_query(question)
-
-    def _call_llm(
-        self, assistant, previous_messages, question, search_results, stream, interaction_id
-    ):
-        return llm.ask(
-            assistant,
-            previous_messages,
-            question,
-            search_results,
-            stream=stream,
-            interaction_id=interaction_id,
-        )
-
-    @staticmethod
-    def _is_streaming_response(llm_response, stream):
-        return stream and (callable(llm_response) or hasattr(llm_response, "__iter__"))
-
-    @staticmethod
-    def _parse_search_results(search_results: list[Document]) -> list[dict]:
-        return [
-            {
-                "text": doc.document.page_content,
-                "source": doc.document.metadata.get("source"),
-                "score": doc.document.metadata.get("relevance_score"),
-                "retrieval_method": doc.document.metadata.get("retrieval_method"),
-            }
-            for doc in search_results
-        ]
-
-    @staticmethod
-    def _get_search_results(assistant_id, query, embedding):
-        return search_engine.search(assistant_id, query, embedding)
-
-    def _handle_streaming_response(
-        self,
-        llm_response,
-        question,
-        embedding,
-        search_results,
-        session_uuid,
-        interaction_id,
-        client,
-    ):
-        source_doc_info = self._parse_search_results(search_results)
-
-        def accumulate_and_stream():
-            accumulated_response = ""
-            for raw_chunk in llm_response():
-                text_content = self._extract_text_from_chunk(raw_chunk)
-                accumulated_response += text_content
-                yield raw_chunk
-            self._log_interaction(
-                question,
-                accumulated_response,
-                source_doc_info,
-                embedding,
-                session_uuid,
-                interaction_id,
-                client,
-            )
-
-        return Response(stream_with_context(accumulate_and_stream()))
-
-    def _handle_final_response(
-        self,
-        llm_response,
-        question,
-        search_results,
-        embedding,
-        session_uuid,
-        interaction_id,
-        client,
-    ):
-        source_doc_info = self._parse_search_results(search_results)
-
-        self._log_interaction(
-            question,
-            llm_response,
-            source_doc_info,
-            embedding,
-            session_uuid,
-            interaction_id,
-            client,
-        )
-        return {"response": llm_response}, 200
-
-    def _extract_text_from_chunk(self, raw_chunk):
-        try:
-            # the raw_chunk is a string that looks like this:
-            # data: {"text_content": "Hello, how can I help you today?"}\r\n
-            # we need to extract the text_content from it for logging interactions
-            _, data = raw_chunk.split("data:")
-            return json.loads(data.strip()).get("text_content", "")
-        except Exception:
-            log.exception("error extracting text_content from chunk")
-            return ""
-
-    # Looks like a silly function but it makes it easier to mock in tests
-    def _interaction_storage_enabled(self) -> bool:
-        return config.STORE_INTERACTIONS is True
-
-    def _log_interaction(
-        self, question, response, source_doc_info, embedding, session_uuid, interaction_id, client
-    ):
-        if self._interaction_storage_enabled() is False:
-            return
-        try:
-            store_interaction(
-                question=question,
-                llm_response=response,
-                source_doc_chunks=source_doc_info,
-                question_embedding=embedding,
-                session_uuid=session_uuid,
-                interaction_id=interaction_id,
-                client=client,
-            )
-        except Exception:
-            log.exception("Failed to log interaction")
