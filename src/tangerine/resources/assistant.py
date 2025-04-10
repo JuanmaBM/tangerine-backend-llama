@@ -18,7 +18,6 @@ from tangerine.llama import llama_client
 from tangerine.utils import File, add_filenames_to_assistant, embed_files, remove_files
 from tangerine.vector import vector_db
 
-from llama_stack_client import AgentEventLogger
 
 log = logging.getLogger("tangerine.resources")
 
@@ -48,6 +47,7 @@ class AssistantsApi(Resource):
 
         try:
             assistant = Assistant.create(name, description, request.json.get("system_prompt"))
+            llama_client.register_assistan_vector(assistant)
         except Exception:
             log.exception("error creating assistant")
             return {"message": "error creating assistant"}, 500
@@ -82,7 +82,7 @@ class AssistantApi(Resource):
             return {"message": "assistant not found"}, 404
 
         assistant.delete()
-        vector_db.delete_document_chunks({"assistant_id": assistant.id})
+        llama_client.unregister_assistant_vector(assistant)
         return {"message": "assistant deleted successfully"}, 200
 
 
@@ -114,7 +114,6 @@ class AssistantDocuments(Resource):
             for file in files:
                 yield json.dumps({"file": file.display_name, "step": "start"}) + "\n"
                 embed_files([file], assistant)
-                llama_client.insert_documents([file], assistant)
                 add_filenames_to_assistant([file], assistant)
                 yield json.dumps({"file": file.display_name, "step": "end"}) + "\n"
 

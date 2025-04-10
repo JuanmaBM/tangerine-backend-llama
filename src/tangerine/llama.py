@@ -17,21 +17,10 @@ class LlamaClient:
         client = LlamaStackAsLibraryClient("ollama")
         client.initialize()
 
-        # for vector_db_id in client.vector_dbs.list():
-        #     client.vector_dbs.unregister(vector_db_id=vector_db_id.identifier)
-
         vector_providers = [
             provider for provider in client.providers.list() if provider.api == "vector_io"
         ]
-        provider_id = vector_providers[0].provider_id
-        self.vector_db_id = "tangerine-vector-db"
-        client.vector_dbs.register(
-            vector_db_id=self.vector_db_id,
-            provider_id=provider_id,
-            embedding_model="all-MiniLM-L6-v2",
-            embedding_dimension=768,
-        )
-
+        self.provider_id = vector_providers[0].provider_id
         self.client = client
 
     def insert_documents(self, files: list[File], assistant: Assistant) -> None:
@@ -45,20 +34,31 @@ class LlamaClient:
         ]
         self.client.tool_runtime.rag_tool.insert(
             documents=documents,
-            vector_db_id=self.vector_db_id,
+            vector_db_id=assistant.id,
             chunk_size_in_tokens=1500,
         )
 
     def ask(
         self, assistant, question, interaction_id
     ):
-        agent = self._create_agent()
+        agent = self._create_agent(assistant)
         response = agent.create_turn(
             messages=[{"role": "user", "content": question}],
             session_id=agent.create_session(interaction_id),
             stream=True,
         )
         return response
+
+    def register_assistant_vector(self, assistant: Assistant):
+        self.client.vector_dbs.register(
+            vector_db_id={assistant.id},
+            provider_id=self.provider_id,
+            embedding_model="all-MiniLM-L6-v2",
+            embedding_dimension=768,
+        )
+
+    def unregister_assistant_vector(self, assistant: Assistant):
+        self.client.vector_dbs.unregister(vector_db_id=assistant.id)
 
     @staticmethod
     def generate_response(response) -> Response:
@@ -73,17 +73,17 @@ class LlamaClient:
                 yield sse_line.encode("utf-8")
         return Response(stream_with_context(build_stream()))
 
-    def _create_agent(self) -> Agent:
+    def _create_agent(self, assistant: Assistant) -> Agent:
         return Agent(
             self.client,
             model=os.environ["INFERENCE_MODEL"],
-            instructions="You are a helpful assistant. Use the knowledge_search tool to get information. You must not ask something that is not in your knowledge_search information",
+            instructions=assistant.system_prompt,
             enable_session_persistence=True,
             tools=[
                 {
                     "name": "builtin::rag/knowledge_search",
                     "args": {
-                        "vector_db_ids": [self.vector_db_id],
+                        "vector_db_ids": [assistant.id],
                     },
                 }
             ],

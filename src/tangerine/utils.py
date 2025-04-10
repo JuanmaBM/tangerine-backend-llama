@@ -4,11 +4,13 @@ from .file import File, validate_file_path, validate_source
 from .models.assistant import Assistant
 from .vector import vector_db
 
+from tangerine.llama import llama_client
+
 
 def embed_files(files: List[File], assistant: Assistant) -> None:
     for file in files:
         file.validate()
-        vector_db.add_file(file, assistant.id)
+        llama_client.insert_documents([file], assistant)
 
 
 def add_filenames_to_assistant(files: List[File], assistant: Assistant) -> None:
