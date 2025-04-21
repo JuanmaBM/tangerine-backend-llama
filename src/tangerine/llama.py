@@ -14,7 +14,8 @@ from .models.assistant import Assistant
 
 class LlamaClient:
     def __init__(self):
-        client = LlamaStackAsLibraryClient("ollama")
+        # client = LlamaStackAsLibraryClient("ollama")
+        client = LlamaStackAsLibraryClient("/home/jbarea/Documents/hcm/tangerine/tangerine-backend-llama/custom-template.yaml")
         client.initialize()
 
         vector_providers = [
@@ -51,10 +52,10 @@ class LlamaClient:
 
     def register_assistant_vector(self, assistant: Assistant):
         self.client.vector_dbs.register(
-            vector_db_id={assistant.id},
+            vector_db_id=str(assistant.id),
             provider_id=self.provider_id,
-            embedding_model="all-MiniLM-L6-v2",
-            embedding_dimension=768,
+            embedding_model="nomic-embed-text:latest",
+            embedding_dimension=1536,
         )
 
     def unregister_assistant_vector(self, assistant: Assistant):

@@ -47,7 +47,7 @@ class AssistantsApi(Resource):
 
         try:
             assistant = Assistant.create(name, description, request.json.get("system_prompt"))
-            llama_client.register_assistan_vector(assistant)
+            llama_client.register_assistant_vector(assistant)
         except Exception:
             log.exception("error creating assistant")
             return {"message": "error creating assistant"}, 500

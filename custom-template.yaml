@@ -1,0 +1,170 @@
+apis:
+- agents
+- datasetio
+- eval
+- inference
+- safety
+- scoring
+- tool_runtime
+- vector_io
+benchmarks: []
+container_image: null
+datasets: []
+external_providers_dir: null
+image_name: ollama
+logging: null
+metadata_store:
+  type: postgres
+  user: postgres
+  password: postgres
+  host: localhost
+  port: 5432
+  database: llamastack
+models:
+- metadata: {}
+  model_id: meta-llama/Llama-3.2-3B-Instruct
+  provider_id: ollama
+  provider_model_id: null
+- metadata:
+    embedding_dimension: 384
+  model_id: all-MiniLM-L6-v2
+  provider_id: ollama
+  provider_model_id: all-minilm:latest
+  model_type: embedding
+- metadata:
+    embedding_dimension: 1536
+  model_id: nomic-embed-text:latest
+  model_type: embedding
+  provider_id: ollama
+  provider_model_id: nomic-embed-text:latest
+providers:
+  agents:
+  - config:
+      persistence_store:
+        type: postgres
+        name: postgres_kv
+        host: localhost
+        port: 5432
+        database: llamastack
+        user: postgres
+        password: postgres
+    provider_id: meta-reference
+    provider_type: inline::meta-reference
+  datasetio:
+  - config:
+      kvstore:
+        type: postgres
+        name: postgres_kv
+        host: localhost
+        port: 5432
+        database: llamastack
+        user: postgres
+        password: postgres
+    provider_id: huggingface
+    provider_type: remote::huggingface
+  - config:
+      kvstore:
+        type: postgres
+        name: postgres_kv
+        host: localhost
+        port: 5432
+        database: llamastack
+        user: postgres
+        password: postgres
+    provider_id: localfs
+    provider_type: inline::localfs
+  eval:
+  - config:
+      kvstore:
+        type: postgres
+        name: postgres_kv
+        host: localhost
+        port: 5432
+        database: llamastack
+        user: postgres
+        password: postgres
+    provider_id: meta-reference
+    provider_type: inline::meta-reference
+  inference:
+  - config:
+      url: http://localhost:11434
+    provider_id: ollama
+    provider_type: remote::ollama
+  safety:
+  - config:
+      excluded_categories: []
+    provider_id: llama-guard
+    provider_type: inline::llama-guard
+  scoring:
+  - config: {}
+    provider_id: basic
+    provider_type: inline::basic
+  - config: {}
+    provider_id: llm-as-judge
+    provider_type: inline::llm-as-judge
+  - config:
+      openai_api_key: '********'
+    provider_id: braintrust
+    provider_type: inline::braintrust
+  tool_runtime:
+  - config:
+      api_key: '********'
+      max_results: 3
+    provider_id: brave-search
+    provider_type: remote::brave-search
+  - config:
+      api_key: '********'
+      max_results: 3
+    provider_id: tavily-search
+    provider_type: remote::tavily-search
+  - config: {}
+    provider_id: code-interpreter
+    provider_type: inline::code-interpreter
+  - config: {}
+    provider_id: rag-runtime
+    provider_type: inline::rag-runtime
+  - config: {}
+    provider_id: model-context-protocol
+    provider_type: remote::model-context-protocol
+  - config:
+      api_key: '********'
+    provider_id: wolfram-alpha
+    provider_type: remote::wolfram-alpha
+  vector_io:
+  - config:
+      kvstore:
+        type: postgres
+        name: postgres_kv
+        host: localhost
+        port: 5432
+        database: llamastack
+        user: postgres
+        password: postgres
+    provider_id: pgvector
+    provider_type: remote::pgvector
+scoring_fns: []
+server:
+  auth: null
+  port: 8321
+  tls_certfile: null
+  tls_keyfile: null
+shields: []
+tool_groups:
+- args: null
+  mcp_endpoint: null
+  provider_id: tavily-search
+  toolgroup_id: builtin::websearch
+- args: null
+  mcp_endpoint: null
+  provider_id: rag-runtime
+  toolgroup_id: builtin::rag
+- args: null
+  mcp_endpoint: null
+  provider_id: code-interpreter
+  toolgroup_id: builtin::code_interpreter
+- args: null
+  mcp_endpoint: null
+  provider_id: wolfram-alpha
+  toolgroup_id: builtin::wolfram_alpha
+vector_dbs: []
+version: '2'

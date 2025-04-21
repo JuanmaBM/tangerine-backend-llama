@@ -39,6 +39,7 @@ opentelemetry-exporter-otlp-proto-http = "*"
 faiss-cpu = "*"
 mcp = "*"
 autoevals = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 ipython = "*"
