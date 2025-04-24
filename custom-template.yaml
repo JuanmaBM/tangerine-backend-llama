@@ -6,6 +6,7 @@ apis:
 - safety
 - scoring
 - tool_runtime
+- telemetry
 - vector_io
 benchmarks: []
 container_image: null
@@ -32,7 +33,7 @@ models:
   provider_model_id: all-minilm:latest
   model_type: embedding
 - metadata:
-    embedding_dimension: 1536
+    embedding_dimension: 768
   model_id: nomic-embed-text:latest
   model_type: embedding
   provider_id: ollama
@@ -50,39 +51,34 @@ providers:
         password: postgres
     provider_id: meta-reference
     provider_type: inline::meta-reference
+  - config:
+      persistence_store:
+        db_path: /home/jbarea/.llama/distributions/ollama/agents_store.db
+        namespace: null
+        type: sqlite
+    provider_id: meta-reference
+    provider_type: inline::meta-reference
   datasetio:
   - config:
       kvstore:
-        type: postgres
-        name: postgres_kv
-        host: localhost
-        port: 5432
-        database: llamastack
-        user: postgres
-        password: postgres
+        db_path: /home/jbarea/.llama/distributions/ollama/huggingface_datasetio.db
+        namespace: null
+        type: sqlite
     provider_id: huggingface
     provider_type: remote::huggingface
   - config:
       kvstore:
-        type: postgres
-        name: postgres_kv
-        host: localhost
-        port: 5432
-        database: llamastack
-        user: postgres
-        password: postgres
+        db_path: /home/jbarea/.llama/distributions/ollama/localfs_datasetio.db
+        namespace: null
+        type: sqlite
     provider_id: localfs
     provider_type: inline::localfs
   eval:
   - config:
       kvstore:
-        type: postgres
-        name: postgres_kv
-        host: localhost
-        port: 5432
-        database: llamastack
-        user: postgres
-        password: postgres
+        db_path: /home/jbarea/.llama/distributions/ollama/meta_reference_eval.db
+        namespace: null
+        type: sqlite
     provider_id: meta-reference
     provider_type: inline::meta-reference
   inference:
@@ -106,6 +102,13 @@ providers:
       openai_api_key: '********'
     provider_id: braintrust
     provider_type: inline::braintrust
+  telemetry:
+  - config:
+      service_name: "\u200B"
+      sinks: sqlite
+      sqlite_db_path: /home/jbarea/.llama/distributions/ollama/trace_store.db
+    provider_id: meta-reference
+    provider_type: inline::meta-reference
   tool_runtime:
   - config:
       api_key: '********'
@@ -142,6 +145,13 @@ providers:
         password: postgres
     provider_id: pgvector
     provider_type: remote::pgvector
+  - config:
+      kvstore:
+        db_path: /home/jbarea/.llama/distributions/ollama/faiss_store.db
+        namespace: null
+        type: sqlite
+    provider_id: faiss
+    provider_type: inline::faiss
 scoring_fns: []
 server:
   auth: null

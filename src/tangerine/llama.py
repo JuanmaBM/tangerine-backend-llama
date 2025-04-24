@@ -1,21 +1,20 @@
 import os
 import json
 import uuid
-import tangerine.config as cfg
 
+from pathlib import Path
 from typing import Generator, Any
 from flask import Response, stream_with_context
-from flask_restful import Resource
 from llama_stack_client import Agent, AgentEventLogger, RAGDocument
 from llama_stack import LlamaStackAsLibraryClient
 
-from .file import File, validate_file_path, validate_source
+from .file import File
 from .models.assistant import Assistant
 
 class LlamaClient:
     def __init__(self):
-        # client = LlamaStackAsLibraryClient("ollama")
-        client = LlamaStackAsLibraryClient("/home/jbarea/Documents/hcm/tangerine/tangerine-backend-llama/custom-template.yaml")
+        config_file = self._get_config_file()
+        client = LlamaStackAsLibraryClient(config_file)
         client.initialize()
 
         vector_providers = [
@@ -35,7 +34,7 @@ class LlamaClient:
         ]
         self.client.tool_runtime.rag_tool.insert(
             documents=documents,
-            vector_db_id=assistant.id,
+            vector_db_id=f"assistant_{assistant.id}",
             chunk_size_in_tokens=1500,
         )
 
@@ -52,10 +51,10 @@ class LlamaClient:
 
     def register_assistant_vector(self, assistant: Assistant):
         self.client.vector_dbs.register(
-            vector_db_id=str(assistant.id),
+            vector_db_id=f"assistant_{assistant.id}",
             provider_id=self.provider_id,
             embedding_model="nomic-embed-text:latest",
-            embedding_dimension=1536,
+            embedding_dimension=768,
         )
 
     def unregister_assistant_vector(self, assistant: Assistant):
@@ -79,15 +78,22 @@ class LlamaClient:
             self.client,
             model=os.environ["INFERENCE_MODEL"],
             instructions=assistant.system_prompt,
-            enable_session_persistence=True,
+            enable_session_persistence=False,
             tools=[
                 {
                     "name": "builtin::rag/knowledge_search",
                     "args": {
-                        "vector_db_ids": [assistant.id],
+                        "vector_db_ids": [f"assistant_{assistant.id}"],
                     },
                 }
             ],
         )
+
+    def _get_config_file(self):
+        project_root = Path(__file__).resolve()
+        while not (project_root / "custom-template.yaml").exists():
+            project_root = project_root.parent
+        config_file = project_root / "custom-template.yaml"
+        return str(config_file)
 
 llama_client = LlamaClient()
