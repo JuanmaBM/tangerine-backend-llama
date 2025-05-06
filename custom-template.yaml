@@ -12,7 +12,7 @@ benchmarks: []
 container_image: null
 datasets: []
 external_providers_dir: null
-image_name: ollama
+image_name: postgres-vllm
 logging: null
 metadata_store:
   type: postgres
@@ -23,8 +23,8 @@ metadata_store:
   database: llamastack
 models:
 - metadata: {}
-  model_id: meta-llama/Llama-3.2-3B-Instruct
-  provider_id: ollama
+  model_id: mistral-7b-instruct
+  provider_id: vllm-inference
   provider_model_id: null
 - metadata:
     embedding_dimension: 384
@@ -53,7 +53,7 @@ providers:
     provider_type: inline::meta-reference
   - config:
       persistence_store:
-        db_path: /home/jbarea/.llama/distributions/ollama/agents_store.db
+        db_path: /home/jbarea/.llama/distributions/postgres-vllm/agents_store.db
         namespace: null
         type: sqlite
     provider_id: meta-reference
@@ -61,14 +61,14 @@ providers:
   datasetio:
   - config:
       kvstore:
-        db_path: /home/jbarea/.llama/distributions/ollama/huggingface_datasetio.db
+        db_path: /home/jbarea/.llama/distributions/postgres-vllm/huggingface_datasetio.db
         namespace: null
         type: sqlite
     provider_id: huggingface
     provider_type: remote::huggingface
   - config:
       kvstore:
-        db_path: /home/jbarea/.llama/distributions/ollama/localfs_datasetio.db
+        db_path: /home/jbarea/.llama/distributions/postgres-vllm/localfs_datasetio.db
         namespace: null
         type: sqlite
     provider_id: localfs
@@ -76,12 +76,17 @@ providers:
   eval:
   - config:
       kvstore:
-        db_path: /home/jbarea/.llama/distributions/ollama/meta_reference_eval.db
+        db_path: /home/jbarea/.llama/distributions/postgres-vllm/meta_reference_eval.db
         namespace: null
         type: sqlite
     provider_id: meta-reference
     provider_type: inline::meta-reference
   inference:
+  - config:
+      api_token: 'xxxx'
+      url: https://mistral-7b-instruct-v0-3-maas-apicast-production.apps.prod.rhoai.rh-aiservices-bu.com:443/v1
+    provider_id: vllm-inference
+    provider_type: remote::vllm
   - config:
       url: http://localhost:11434
     provider_id: ollama
@@ -106,7 +111,7 @@ providers:
   - config:
       service_name: "\u200B"
       sinks: sqlite
-      sqlite_db_path: /home/jbarea/.llama/distributions/ollama/trace_store.db
+      sqlite_db_path: /home/jbarea/.llama/distributions/postgres-vllm/trace_store.db
     provider_id: meta-reference
     provider_type: inline::meta-reference
   tool_runtime:
@@ -120,9 +125,6 @@ providers:
       max_results: 3
     provider_id: tavily-search
     provider_type: remote::tavily-search
-  - config: {}
-    provider_id: code-interpreter
-    provider_type: inline::code-interpreter
   - config: {}
     provider_id: rag-runtime
     provider_type: inline::rag-runtime
@@ -147,7 +149,7 @@ providers:
     provider_type: remote::pgvector
   - config:
       kvstore:
-        db_path: /home/jbarea/.llama/distributions/ollama/faiss_store.db
+        db_path: /home/jbarea/.llama/distributions/postgres-vllm/faiss_store.db
         namespace: null
         type: sqlite
     provider_id: faiss
@@ -168,10 +170,6 @@ tool_groups:
   mcp_endpoint: null
   provider_id: rag-runtime
   toolgroup_id: builtin::rag
-- args: null
-  mcp_endpoint: null
-  provider_id: code-interpreter
-  toolgroup_id: builtin::code_interpreter
 - args: null
   mcp_endpoint: null
   provider_id: wolfram-alpha
