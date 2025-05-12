@@ -20,7 +20,7 @@
                 "EMBED_MODEL_NAME": "nomic-embed-text",
                 "STORE_INTERACTIONS": "true",
                 "ENABLE_HYBRID_SEARCH": "true",
-                "INFERENCE_MODEL": "mistral-7b-instruct",
+                "INFERENCE_MODEL": "meta-llama/Llama-3.2-3B-Instruct",
                 "LLAMA_STACK_PORT": "8321",
             },
             "args": [
